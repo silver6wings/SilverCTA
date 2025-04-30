@@ -1,4 +1,7 @@
-from tqsdk import TqAccount, TqKq
+"""
+https://doc.shinnytech.com/tqsdk/latest/quickstart.html
+"""
+from tqsdk import TqApi, TqAuth, TqAccount, TqKq
 
 from credentials.tq import *
 from delegate.tq_delegate import TQDelegate
@@ -8,7 +11,7 @@ from tools.utils_basic import pd_show_all
 IS_PROD = False
 
 
-if __name__ == '__main__':
+def main():
     pd_show_all()
 
     my_symbol = "SHFE.au2506"   # 测试的品种
@@ -38,3 +41,8 @@ if __name__ == '__main__':
     )
 
     delegate.run()
+
+
+if __name__ == '__main__':
+    main()
+

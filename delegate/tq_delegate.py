@@ -1,10 +1,12 @@
 import datetime
+from contextlib import closing
 from typing import Optional, Union, Callable
 
 import pandas as pd
 
 from tqsdk import TqApi, TqAuth, TqMultiAccount
 from tqsdk.api import UnionTradeable
+
 # from tqsdk.objs import Order
 
 
@@ -52,19 +54,19 @@ class TQDelegate:
 
         self.df = None
 
-    def run(self):
-        with TqApi(
+    def run(self, advance: bool=True):
+        with closing(TqApi(
             account=self.tq_account,
             auth=TqAuth(self.tq_username, self.tq_password),
-        ) as my_api:
-            self.subscribe_kline(
+        )) as my_api:
+            self.subscribe_kline_advance(
                 api=my_api,
                 symbol=self.symbol,
                 duration_seconds=self.duration_seconds,
                 kline_period=self.data_length,
             )
 
-    def subscribe_kline(
+    def subscribe_kline_advance(
         self,
         api: TqApi,
         symbol: str,
@@ -72,9 +74,9 @@ class TQDelegate:
         kline_period: int,
     ):
         df = api.get_kline_serial(
-            symbol=self.symbol,
-            duration_seconds=self.duration_seconds,
-            data_length=self.data_length,
+            symbol=symbol,
+            duration_seconds=duration_seconds,
+            data_length=kline_period,
         )
         self.df = df.copy()
         self.strategy_init(self.df)
@@ -95,29 +97,27 @@ class TQDelegate:
             self.df = add_one_row(self.df, row_df)
             self.strategy_run(df=self.df, overdue=True)
 
-        while True:
-            api.wait_update()
-            print(0)
-
-            # 监测量价状态
+        # 监测量价状态
+        while api.wait_update():
             if api.is_changing(df.iloc[-1], 'datetime'):
+                print(f'>>>{datetime.datetime.now()} 新的 KLine 更新 '
+                      f'Date Time: {timestamp_us_to_datetime(self.df.tail(1).datetime.values[0])}')
+
                 self.df = update_latest_one_row(self.df, df.tail(2).head(1))
-                self.strategy_run(self.df, overdue=True)
+                self.strategy_run(self.df, overdue=True)  # 新的Kline已经就位，前一个Kline需要更新触发
 
                 self.df = remove_earliest_one_rows(self.df)
                 self.df = add_one_row(self.df, df.tail(1))
 
-                print(f'>>>{datetime.datetime.now()} 新的 KLine 更新 '
-                      f'Date Time: {timestamp_us_to_datetime(self.df.tail(1).datetime.values[0])}')
 
                 self.strategy_run(self.df, overdue=False)
 
             elif api.is_changing(df.iloc[-1], 'close'):
-                self.df = update_latest_one_row(self.df, df.tail(1))
-
                 print(f'>>> {datetime.datetime.now()} 新的 Price 更新 '
                       f'Date Time: {timestamp_us_to_datetime(self.df.tail(1).datetime.values[0])} '
                       f'Close: {self.df.tail(1).close.values[0]}')
+
+                self.df = update_latest_one_row(self.df, df.tail(1))
                 self.strategy_run(self.df, overdue=False)
 
             elif api.is_changing(df.iloc[-1], 'volume'):
