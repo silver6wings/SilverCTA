@@ -1,1 +1,5 @@
-tqsdk==3.8.0
+pyecharts>=2.0.5
+tqsdk>=3.8.0
+watchdog>=4.0.1
+selenium>=4.21.0
+matplotlib>=3.10.1
