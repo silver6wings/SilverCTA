@@ -1,6 +1,6 @@
 from tqsdk import TqApi, TqAuth
 
-from credentials.tq import *
+from credentials import *
 
 
 SYMBOL = "SHFE.au2505"

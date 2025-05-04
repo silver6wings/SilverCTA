@@ -124,4 +124,4 @@ _html/
 _temp/
 
 # credential
-credentials/tq.py
+credentials.py

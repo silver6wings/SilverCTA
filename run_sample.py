@@ -3,7 +3,7 @@ https://doc.shinnytech.com/tqsdk/latest/quickstart.html
 """
 from tqsdk import TqApi, TqAuth, TqAccount, TqKq
 
-from credentials.tq import *
+from credentials import *
 from delegate.tq_delegate import TQDelegate
 from tools.utils_basic import pd_show_all
 
