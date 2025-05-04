@@ -1,8 +1,9 @@
 """
-复制一份改名为 tq.py 生效
+复制一份改名为 credentials.py 生效
 """
 
-# 天勤账户
+# 在这里注册天勤账户
+# https://account.shinnytech.com/
 tq_account = ''
 tq_password = ''
 
