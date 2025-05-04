@@ -119,6 +119,7 @@ dmypy.json
 *.dmp
 
 # cache
+_data/
 
 # credential
 credentials.py
