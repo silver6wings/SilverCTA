@@ -10,21 +10,28 @@ from tqsdk.api import UnionTradeable
 # from tqsdk.objs import Order
 
 
-def timestamp_us_to_datetime(timestamp_us):
+class UpdateType:
+    PrevKLine = 0
+    NewKLine = 1
+    NewPrice = 2
+    NewVolume = 3
+
+
+def timestamp_us_to_datetime(timestamp_us) -> datetime.datetime:
     return datetime.datetime.fromtimestamp((timestamp_us / 10 ** 9).astype(float))
 
 
-def remove_earliest_one_rows(df: pd.DataFrame):
+def remove_earliest_one_rows(df: pd.DataFrame) -> pd.DataFrame:
     df = df.drop(df.index[0])
     return df
 
 
-def add_one_row(df: pd.DataFrame, row_df: pd.DataFrame):
+def add_one_row(df: pd.DataFrame, row_df: pd.DataFrame) -> pd.DataFrame:
     df = pd.concat([df, row_df], ignore_index=True)
     return df
 
 
-def update_latest_one_row(df: pd.DataFrame, row_df: pd.DataFrame):
+def update_latest_one_row(df: pd.DataFrame, row_df: pd.DataFrame) -> pd.DataFrame:
     df = df.drop(df.index[-1])
     df = pd.concat([df, row_df], ignore_index=True)
     return df
@@ -87,7 +94,11 @@ class TQDelegate:
         # 更新最后一行
         last_df = df[df['datetime'] == last_datetime]
         self.df = update_latest_one_row(self.df, last_df)
-        self.strategy_run(df=self.df, overdue=True)
+        self.strategy_run(
+            system_datetime=datetime.datetime.now(),
+            kline_datetime=timestamp_us_to_datetime(self.df.tail(1).datetime.values[0]),
+            kline_dataframe=self.df,
+            update_type=UpdateType.PrevKLine)
 
         # 添加多出来的行
         diff_rows = df[df['datetime'] > last_datetime]
@@ -95,30 +106,45 @@ class TQDelegate:
             self.df = remove_earliest_one_rows(self.df)
             row_df = pd.DataFrame([row], columns=self.df.columns)
             self.df = add_one_row(self.df, row_df)
-            self.strategy_run(df=self.df, overdue=True)
+            self.strategy_run(
+                system_datetime=datetime.datetime.now(),
+                kline_datetime=timestamp_us_to_datetime(self.df.tail(1).datetime.values[0]),
+                kline_dataframe=self.df,
+                update_type=UpdateType.PrevKLine)
 
         # 监测量价状态
         while api.wait_update():
             if api.is_changing(df.iloc[-1], 'datetime'):
-                print(f'>>>{datetime.datetime.now()} 新的 KLine 更新 '
-                      f'Date Time: {timestamp_us_to_datetime(self.df.tail(1).datetime.values[0])}')
-
+                # 新的 KLine 更新
                 self.df = update_latest_one_row(self.df, df.tail(2).head(1))
-                self.strategy_run(self.df, overdue=True)  # 新的Kline已经就位，前一个Kline需要更新触发
+                self.strategy_run(
+                    system_datetime=datetime.datetime.now(),
+                    kline_datetime=timestamp_us_to_datetime(self.df.tail(1).datetime.values[0]),
+                    kline_dataframe=self.df,
+                    update_type=UpdateType.PrevKLine)
 
                 self.df = remove_earliest_one_rows(self.df)
                 self.df = add_one_row(self.df, df.tail(1))
 
-
-                self.strategy_run(self.df, overdue=False)
+                self.strategy_run(
+                    system_datetime=datetime.datetime.now(),
+                    kline_datetime=timestamp_us_to_datetime(self.df.tail(1).datetime.values[0]),
+                    kline_dataframe=self.df,
+                    update_type=UpdateType.NewKLine)
 
             elif api.is_changing(df.iloc[-1], 'close'):
-                print(f'>>> {datetime.datetime.now()} 新的 Price 更新 '
-                      f'Date Time: {timestamp_us_to_datetime(self.df.tail(1).datetime.values[0])} '
-                      f'Close: {self.df.tail(1).close.values[0]}')
-
+                # 新的 Price 更新
                 self.df = update_latest_one_row(self.df, df.tail(1))
-                self.strategy_run(self.df, overdue=False)
+                self.strategy_run(
+                    system_datetime=datetime.datetime.now(),
+                    kline_datetime=timestamp_us_to_datetime(self.df.tail(1).datetime.values[0]),
+                    kline_dataframe=self.df,
+                    update_type=UpdateType.NewPrice)
 
             elif api.is_changing(df.iloc[-1], 'volume'):
-                print(f'>>> {datetime.datetime.now()} 新的 Volume 更新 无操作')
+                # 新的 Volume 更新
+                self.strategy_run(
+                    system_datetime=datetime.datetime.now(),
+                    kline_datetime=timestamp_us_to_datetime(self.df.tail(1).datetime.values[0]),
+                    kline_dataframe=self.df,
+                    update_type=UpdateType.NewVolume)

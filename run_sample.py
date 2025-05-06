@@ -1,10 +1,13 @@
 """
 https://doc.shinnytech.com/tqsdk/latest/quickstart.html
 """
+import datetime
+
+import pandas as pd
 from tqsdk import TqApi, TqAuth, TqAccount, TqKq
 
 from credentials import *
-from delegate.tq_delegate import TQDelegate
+from delegate.tq_delegate import TQDelegate, UpdateType
 from tools.utils_basic import pd_show_all
 
 
@@ -26,8 +29,22 @@ def main():
     def init(df):
         print(df.tail(2))
 
-    def run(df, overdue):
-        print(df.tail(2))
+    def run(
+        system_datetime: datetime.datetime,
+        kline_datetime: datetime.datetime,
+        kline_dataframe: pd.DataFrame,
+        update_type: int,
+    ):
+        print(f'{system_datetime} {kline_datetime} ', end='')
+
+        if update_type == UpdateType.PrevKLine:
+            print('prev kline \n', kline_dataframe.tail(2))
+        elif update_type == UpdateType.NewKLine:
+            print('kline \n', kline_dataframe.tail(2))
+        elif update_type == UpdateType.NewPrice:
+            print('close ', kline_dataframe.tail(1).close.values[0])
+        elif update_type == UpdateType.NewVolume:
+            print('volume ', kline_dataframe.tail(1).volume.values[0])
 
     delegate = TQDelegate(
         tq_account=my_account,
@@ -45,4 +62,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
