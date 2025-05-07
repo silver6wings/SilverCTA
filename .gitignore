@@ -118,6 +118,8 @@ dmypy.json
 # project only
 *.dmp
 
+.DS_Store
+
 # cache
 _data/
 
